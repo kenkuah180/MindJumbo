@@ -1,0 +1,328 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0" />
+
+  <title>MindJumbo</title>
+
+  <!-- React -->
+  <script crossorigin
+    src="https://unpkg.com/react@18.3.1/umd/react.production.min.js">
+  </script>
+
+  <!-- React DOM -->
+  <script crossorigin
+    src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js">
+  </script>
+
+  <!-- JSX compiler for prototype -->
+  <script
+    src="https://unpkg.com/@babel/standalone@7/babel.min.js">
+  </script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: #f4f6fa;
+      font-family: -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+      color: #15233b;
+    }
+
+    .app {
+      max-width: 650px;
+      margin: auto;
+      padding: 65px 24px 100px;
+    }
+
+    h1 {
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      margin: 0;
+    }
+
+    .subtitle {
+      color: #697586;
+      margin-top: 10px;
+      margin-bottom: 48px;
+    }
+
+    h2 {
+      font-size: 22px;
+      margin: 28px 0 16px;
+    }
+
+    textarea {
+      display: block;
+      width: 100%;
+      min-height: 150px;
+      padding: 18px;
+      border: 1px solid #e4e8f0;
+      border-radius: 14px;
+      background: white;
+      color: #15233b;
+      font: inherit;
+      font-size: 16px;
+      resize: vertical;
+    }
+
+    textarea:focus {
+      outline: 2px solid #2563eb;
+    }
+
+    .save-button {
+      width: 100%;
+      margin-top: 16px;
+      padding: 18px;
+      border: none;
+      border-radius: 12px;
+      background: #2563eb;
+      color: white;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .save-button:disabled {
+      opacity: 0.5;
+    }
+
+    .observation {
+      background: white;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 14px;
+    }
+
+    .observation-text {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      line-height: 1.5;
+      margin: 0 0 14px;
+    }
+
+    .observation-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .date {
+      font-size: 12px;
+      color: #84909f;
+    }
+
+    .delete-button {
+      background: transparent;
+      border: none;
+      color: #dc3545;
+      font-size: 14px;
+      padding: 8px;
+      cursor: pointer;
+    }
+
+    .empty {
+      color: #84909f;
+    }
+
+    .message {
+      color: #b91c1c;
+      font-size: 14px;
+    }
+
+    .footer {
+      margin-top: 60px;
+      text-align: center;
+      color: #9ca3af;
+      font-size: 12px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    const STORAGE_KEY =
+      "mindjumbo-observations-v1";
+
+    // Individual observation component
+    function ObservationCard({ observation, onDelete }) {
+      return (
+        <article className="observation">
+          <p className="observation-text">
+            {observation.text}
+          </p>
+
+          <div className="observation-footer">
+            <span className="date">
+              {new Date(
+                observation.createdAt
+              ).toLocaleString()}
+            </span>
+
+            <button
+              className="delete-button"
+              onClick={() => onDelete(observation.id)}
+            >
+              Delete
+            </button>
+          </div>
+        </article>
+      );
+    }
+
+    // Main MindJumbo application
+    function App() {
+      const [entry, setEntry] = useState("");
+      const [message, setMessage] = useState("");
+
+      const [observations, setObservations] =
+        useState(() => {
+          try {
+            const saved =
+              localStorage.getItem(STORAGE_KEY);
+
+            const parsed = saved
+              ? JSON.parse(saved)
+              : [];
+
+            return Array.isArray(parsed)
+              ? parsed
+              : [];
+          } catch {
+            return [];
+          }
+        });
+
+      function updateObservations(next) {
+        try {
+          localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify(next)
+          );
+          setObservations(next);
+          setMessage("");
+          return true;
+        } catch {
+          setMessage(
+            "Unable to save. Check browser storage."
+          );
+          return false;
+        }
+      }
+
+      function saveObservation(event) {
+        event.preventDefault();
+
+        if (!entry.trim()) return;
+
+        const newObservation = {
+          id: Date.now().toString() +
+            Math.random().toString(36).slice(2),
+          text: entry.trim(),
+          createdAt: new Date().toISOString()
+        };
+
+        const saved = updateObservations([
+          newObservation,
+          ...observations
+        ]);
+
+        if (saved) setEntry("");
+      }
+
+      function deleteObservation(id) {
+        if (!window.confirm(
+          "Delete this observation?"
+        )) return;
+
+        updateObservations(
+          observations.filter(
+            item => item.id !== id
+          )
+        );
+      }
+
+      return (
+        <main className="app">
+
+          <h1>MindJumbo</h1>
+
+          <p className="subtitle">
+            Explore. Observe. Understand.
+          </p>
+
+          <h2>New Observation</h2>
+
+          <form onSubmit={saveObservation}>
+            <textarea
+              aria-label="New observation"
+              placeholder="What did you experience or notice?"
+              maxLength={4000}
+              value={entry}
+              onChange={e => setEntry(e.target.value)}
+            />
+
+            <button
+              className="save-button"
+              type="submit"
+              disabled={!entry.trim()}
+            >
+              Save Observation
+            </button>
+          </form>
+
+          {message && (
+            <p className="message" role="status">
+              {message}
+            </p>
+          )}
+
+          <h2>
+            Observation History ({observations.length})
+          </h2>
+
+          {observations.length === 0 ? (
+            <p className="empty">
+              No observations recorded yet.
+            </p>
+          ) : (
+            observations.map(observation => (
+              <ObservationCard
+                key={observation.id}
+                observation={observation}
+                onDelete={deleteObservation}
+              />
+            ))
+          )}
+
+          <p className="footer">
+            MindJumbo v0.3 — React Prototype
+          </p>
+
+        </main>
+      );
+    }
+
+    // Launch application
+    ReactDOM.createRoot(
+      document.getElementById("root")
+    ).render(<App />);
+  </script>
+
+</body>
+</html>
